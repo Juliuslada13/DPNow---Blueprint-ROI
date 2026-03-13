@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DPNow Blueprint – ROI Calculator</title>
+<style>
+  :root {
+    --navy: #0a1628;
+    --blue: #1e3a5f;
+    --accent: #00b4d8;
+    --accent2: #0077b6;
+    --gold: #f4a261;
+    --light: #f0f4f8;
+    --white: #ffffff;
+    --gray: #6b7280;
+    --green: #10b981;
+    --text: #1f2937;
+    --border: #d1d5db;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--light); color: var(--text); }
+
+  header {
+    background: var(--navy);
+    padding: 18px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  }
+  .logo-area { display: flex; align-items: center; gap: 14px; }
+  .header-badge {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: var(--white);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 16px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%);
+    color: var(--white);
+    text-align: center;
+    padding: 54px 24px 40px;
+  }
+  .hero h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 12px; }
+  .hero h1 span { color: var(--accent); }
+  .hero p { font-size: 1.05rem; opacity: 0.85; max-width: 600px; margin: 0 auto 28px; }
+  .steps-bar { display: flex; justify-content: center; gap: 0; max-width: 600px; margin: 0 auto; }
+  .step-item { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
+  .step-item:not(:last-child)::after {
+    content: ''; position: absolute; top: 18px; left: 50%;
+    width: 100%; height: 2px; background: rgba(255,255,255,0.2);
+  }
+  .step-item.active:not(:last-child)::after,
+  .step-item.done:not(:last-child)::after { background: var(--accent); }
+  .step-num {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; position: relative; z-index: 1; transition: all .3s;
+  }
+  .step-item.active .step-num { background: var(--accent); border-color: var(--accent); color: var(--navy); }
+  .step-item.done .step-num { background: var(--green); border-color: var(--green); }
+  .step-label { font-size: 11px; margin-top: 6px; opacity: 0.7; text-align: center; }
+  .step-item.active .step-label { opacity: 1; color: var(--accent); }
+
+  .container { max-width: 860px; margin: 0 auto; padding: 36px 20px 60px; }
+
+  .card {
+    background: var(--white); border-radius: 14px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 36px; margin-bottom: 24px; display: none;
+    animation: fadeIn .4s ease;
+  }
+  .card.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .card-title {
+    font-size: 1.3rem; font-weight: 800; color: var(--navy);
+    margin-bottom: 6px; display: flex; align-items: center; gap: 10px;
+  }
+  .card-title-icon {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .card-sub { color: var(--gray); font-size: 0.92rem; margin-bottom: 28px; }
+
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media(max-width:600px){ .field-grid { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 8px; }
+  .field label { font-size: 0.88rem; font-weight: 600; color: var(--navy); }
+  .field-value { font-size: 1.15rem; font-weight: 700; color: var(--accent2); text-align: right; }
+  input[type=range] {
+    -webkit-appearance: none; width: 100%; height: 6px;
+    border-radius: 3px; background: var(--border); outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent2); border: 2px solid var(--white);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2); cursor: pointer;
+  }
+  .benchmark {
+    font-size: 0.78rem; color: var(--gray); background: #f8fafc;
+    border-left: 3px solid var(--accent); padding: 4px 8px; border-radius: 0 4px 4px 0;
+  }
+  .benchmark b { color: var(--accent2); }
+
+  .btn-row { display: flex; justify-content: space-between; align-items: center; margin-top: 32px; gap: 12px; }
+  .btn {
+    padding: 13px 32px; border-radius: 8px; font-size: 0.97rem;
+    font-weight: 700; cursor: pointer; border: none; transition: all .2s; letter-spacing: .5px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: var(--white); box-shadow: 0 4px 14px rgba(0,180,216,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,180,216,0.45); }
+  .btn-secondary { background: var(--light); color: var(--navy); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+
+  .result-header {
+    background: linear-gradient(135deg, var(--navy), var(--blue));
+    color: var(--white); border-radius: 12px; padding: 28px 32px;
+    margin-bottom: 24px; text-align: center;
+  }
+  .result-header h2 { font-size: 1.5rem; margin-bottom: 6px; }
+  .result-header .big-num { font-size: 3rem; font-weight: 900; color: var(--accent); letter-spacing: -1px; }
+  .result-header .sub { opacity: 0.75; font-size: 0.9rem; }
+
+  .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  @media(max-width:600px){ .metrics-grid { grid-template-columns: 1fr; } }
+
+  .metric-card {
+    background: var(--white); border-radius: 10px; padding: 18px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07); border-top: 3px solid var(--accent); text-align: center;
+  }
+  .metric-card .m-label { font-size: 0.78rem; color: var(--gray); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  .metric-card .m-val { font-size: 1.5rem; font-weight: 800; color: var(--navy); }
+  .metric-card .m-sub { font-size: 0.78rem; color: var(--gray); margin-top: 2px; }
+  .metric-card.net { border-top-color: var(--green); }
+  .metric-card.net .m-val { color: var(--green); }
+
+  .year-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 0.92rem; }
+  .year-table th {
+    background: var(--navy); color: var(--white);
+    padding: 12px 16px; text-align: left; font-weight: 700;
+  }
+  .year-table th:first-child { border-radius: 8px 0 0 0; }
+  .year-table th:last-child { border-radius: 0 8px 0 0; }
+  .year-table td { padding: 11px 16px; border-bottom: 1px solid var(--border); }
+  .year-table tr:last-child td { border-bottom: none; }
+  .year-table tr:nth-child(even) td { background: #f8fafc; }
+  .year-table .val { font-weight: 700; color: var(--accent2); }
+  .year-table .total-row td { font-weight: 800; color: var(--navy); background: #e8f4fd; font-size: 1rem; }
+  .year-table .net-row td { font-weight: 800; color: var(--green); background: #ecfdf5; font-size: 1rem; }
+
+  .chart-wrap {
+    background: var(--white); border-radius: 12px; padding: 24px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07); margin-bottom: 24px;
+  }
+  .chart-title { font-size: 1rem; font-weight: 700; color: var(--navy); margin-bottom: 16px; }
+  .bar-chart { display: flex; align-items: flex-end; gap: 24px; height: 180px; padding: 0 8px; }
+  .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+  .bar {
+    width: 100%; border-radius: 6px 6px 0 0;
+    background: linear-gradient(to top, var(--accent2), var(--accent));
+    position: relative; min-height: 8px; transition: height .5s ease;
+    display: flex; align-items: flex-start; justify-content: center;
+  }
+  .bar-label { font-size: 0.85rem; font-weight: 700; color: var(--navy); }
+  .bar-year { font-size: 0.8rem; color: var(--gray); }
+  .bar-pct { position: absolute; top: -22px; font-size: 0.78rem; font-weight: 700; color: var(--accent2); white-space: nowrap; }
+
+  .disclaimer {
+    background: #fff8ed; border: 1px solid #f4a261; border-radius: 10px;
+    padding: 16px 20px; font-size: 0.83rem; color: #7c4a00; margin-bottom: 24px; line-height: 1.6;
+  }
+  .disclaimer b { color: #c25a00; }
+
+  .cta-box {
+    background: linear-gradient(135deg, var(--navy), var(--blue));
+    border-radius: 14px; padding: 32px; text-align: center; color: var(--white);
+  }
+  .cta-box h3 { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
+  .cta-box p { opacity: 0.8; font-size: 0.92rem; margin-bottom: 24px; }
+  .cta-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn-cta-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: var(--white); padding: 14px 32px; border-radius: 8px;
+    font-size: 1rem; font-weight: 800; cursor: pointer; border: none;
+    box-shadow: 0 4px 16px rgba(0,180,216,0.4); transition: all .2s;
+    text-decoration: none; display: inline-block;
+  }
+  .btn-cta-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,180,216,0.5); }
+  .btn-cta-secondary {
+    background: transparent; color: var(--white); padding: 14px 32px; border-radius: 8px;
+    font-size: 1rem; font-weight: 700; cursor: pointer; border: 2px solid rgba(255,255,255,0.4);
+    transition: all .2s; text-decoration: none; display: inline-block;
+  }
+  .btn-cta-secondary:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.7); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-area">
+    <svg width="260" height="60" viewBox="0 0 260 60" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="4" width="52" height="52" rx="4" fill="#c8d8f0" opacity="0.18"/>
+      <polyline points="8,10 8,54 54,54" fill="none" stroke="#00b4d8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="22" cy="20" r="5" fill="#0a1628"/>
+      <circle cx="42" cy="28" r="5" fill="#0a1628"/>
+      <circle cx="18" cy="42" r="5" fill="#0a1628"/>
+      <circle cx="44" cy="44" r="3.5" fill="#0a1628"/>
+      <circle cx="14" cy="12" r="3" fill="#00b4d8"/>
+      <circle cx="46" cy="14" r="3" fill="#00b4d8"/>
+      <circle cx="30" cy="32" r="2.5" fill="#1e3a5f"/>
+      <line x1="22" y1="20" x2="42" y2="28" stroke="#0a1628" stroke-width="2" stroke-linecap="round"/>
+      <line x1="22" y1="20" x2="18" y2="42" stroke="#0a1628" stroke-width="2" stroke-linecap="round"/>
+      <line x1="42" y1="28" x2="44" y2="44" stroke="#0a1628" stroke-width="2" stroke-linecap="round"/>
+      <line x1="18" y1="42" x2="44" y2="44" stroke="#0a1628" stroke-width="2" stroke-linecap="round"/>
+      <text x="66" y="24" font-family="'Segoe UI',Arial,sans-serif" font-size="15" font-weight="700" fill="#ffffff" letter-spacing="0.5">Digital</text>
+      <line x1="114" y1="19" x2="200" y2="19" stroke="#00b4d8" stroke-width="2"/>
+      <text x="66" y="41" font-family="'Segoe UI',Arial,sans-serif" font-size="15" font-weight="800" fill="#00b4d8" letter-spacing="0.5">Procurement</text>
+      <text x="66" y="56" font-family="'Segoe UI',Arial,sans-serif" font-size="15" font-weight="800" fill="#00b4d8" letter-spacing="0.5">Now</text>
+      <line x1="104" y1="51" x2="200" y2="51" stroke="#00b4d8" stroke-width="2"/>
+    </svg>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+    <div class="header-badge">ROI Calculator</div>
+    <div style="color:rgba(255,255,255,0.55);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;">Blueprint · Procurement Accelerator</div>
+  </div>
+</header>
+
+<div class="hero">
+  <h1>Unlock Your <span>Procurement ROI</span></h1>
+  <p>Discover the financial impact <strong>Digital Procurement Now — Blueprint</strong> can deliver for your organisation — in under 3 minutes.</p>
+  <div class="steps-bar">
+    <div class="step-item active" id="si1"><div class="step-num">1</div><div class="step-label">Your Business</div></div>
+    <div class="step-item" id="si2"><div class="step-num">2</div><div class="step-label">Spend Profile</div></div>
+    <div class="step-item" id="si3"><div class="step-num">3</div><div class="step-label">Your Results</div></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- STEP 1 -->
+  <div class="card active" id="step1">
+    <div class="card-title"><div class="card-title-icon">🏢</div>Tell Us About Your Business</div>
+    <div class="card-sub">Provide your organisation's key metrics to personalise your ROI estimate.</div>
+    <div class="field-grid">
+
+      <div class="field">
+        <label>Annual Spend</label>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.78rem;color:var(--gray)">€5M — €2B</span>
+          <span class="field-value" id="v_spend">€50M</span>
+        </div>
+        <input type="range" id="spend" min="5" max="2000" value="50" step="5" oninput="updSlider('spend','v_spend',formatMoney)">
+      </div>
+
+      <div class="field">
+        <label>Number of Invoices Per Year</label>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.78rem;color:var(--gray)">200 — 200K</span>
+          <span class="field-value" id="v_inv">2,000</span>
+        </div>
+        <input type="range" id="inv" min="200" max="200000" value="2000" step="200" oninput="updSlider('inv','v_inv',formatNum)">
+      </div>
+
+      <div class="field">
+        <label>Number of Purchase Orders Per Year</label>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.78rem;color:var(--gray)">200 — 100K</span>
+          <span class="field-value" id="v_po">2,000</span>
+        </div>
+        <input type="range" id="po" min="200" max="100000" value="2000" step="200" oninput="updSlider('po','v_po',formatNum)">
+      </div>
+
+      <div class="field">
+        <label>Total Number of Suppliers</label>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.78rem;color:var(--gray)">100 — 10,000</span>
+          <span class="field-value" id="v_sup">500</span>
+        </div>
+        <input type="range" id="sup" min="100" max="10000" value="500" step="100" oninput="updSlider('sup','v_sup',formatNum)">
+      </div>
+
+      <div class="field">
+        <label>Procurement &amp; AP Headcount</label>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.78rem;color:var(--gray)">1 — 200</span>
+          <span class="field-value" id="v_hc">10</span>
+        </div>
+        <input type="range" id="hc" min="1" max="200" value="10" step="1" oninput="updSlider('hc','v_hc',formatNum)">
+      </div>
+
+      <div class="field">
+        <label>Average Annual Salary (Procurement/AP)</label>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.78rem;color:var(--gray)">€30K — €150K</span>
+          <span class="field-value" id="v_sal">€60K</span>
+        </div>
+        <input type="range" id="sal" min="30000" max="150000" value="60000" step="1000" oninput="updSlider('sal','v_sal',formatMoney)">
+      </div>
+
+    </div>
+    <div class="btn-row" style="justify-content:flex-end;">
+      <button class="btn btn-primary" onclick="goStep(2)">Next: Spend Profile →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card" id="step2">
+    <div class="card-title"><div class="card-title-icon">📊</div>Your Spend Profile</div>
+    <div class="card-sub">Help us understand how your spend is currently managed and controlled.</div>
+    <div class="field-grid">
+
+      <!-- 1st: % of Spend Under Contract -->
+      <div class="field">
+        <label>% of Spend Under Contract</label>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.78rem;color:var(--gray)">0% — 100%</span>
+          <span class="field-value" id="v_sc">55%</span>
+        </div>
+        <input type="range" id="sc" min="0" max="100" value="55" step="1" oninput="updSlider('sc','v_sc',formatPct)">
+        <div class="benchmark">Best practice: <b>&gt; 80%</b> of spend under active contracts</div>
+      </div>
+
+      <!-- 2nd: Maverick Buying Rate -->
+      <div class="field">
+        <label>Estimated Maverick Buying Rate (%)</label>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.78rem;color:var(--gray)">0% — 80%</span>
+          <span class="field-value" id="v_mav">30%</span>
+        </div>
+        <input type="range" id="mav" min="0" max="80" value="30" step="1" oninput="updSlider('mav','v_mav',formatPct)">
+        <div class="benchmark">Industry avg: <b>10–20%</b></div>
+      </div>
+
+      <!-- 3rd: e-Catalogs -->
+      <div class="field">
+        <label>% of Purchase Orders from e-Catalogs</label>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.78rem;color:var(--gray)">0% — 100%</span>
+          <span class="field-value" id="v_ecat">20%</span>
+        </div>
+        <input type="range" id="ecat" min="0" max="100" value="20" step="1" oninput="updSlider('ecat','v_ecat',formatPct)">
+        <div class="benchmark">Leaders achieve <b>60–80%</b> catalog-driven ordering</div>
+      </div>
+
+      <!-- 4th: PO Coverage -->
+      <div class="field">
+        <label>% of Spend Covered by a Purchase Order</label>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.78rem;color:var(--gray)">0% — 100%</span>
+          <span class="field-value" id="v_poc">45%</span>
+        </div>
+        <input type="range" id="poc" min="0" max="100" value="45" step="1" oninput="updSlider('poc','v_poc',formatPct)">
+        <div class="benchmark">Best practice: <b>&gt; 90%</b> PO coverage (3-way match)</div>
+      </div>
+
+      <!-- 5th: Invoice Processing Time -->
+      <div class="field">
+        <label>Average Invoice Processing Time (days)</label>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:.78rem;color:var(--gray)">1 — 30 days</span>
+          <span class="field-value" id="v_ipt">12 days</span>
+        </div>
+        <input type="range" id="ipt" min="1" max="30" value="12" step="1" oninput="updSlider('ipt','v_ipt',formatDays)">
+        <div class="benchmark">Best-in-class: <b>3–5 days</b> · Avg: <b>10–15 days</b></div>
+      </div>
+
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goStep(1)">← Back</button>
+      <button class="btn btn-primary" onclick="calcAndShow()">Calculate My ROI →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: RESULTS -->
+  <div class="card" id="step3">
+    <div class="card-title"><div class="card-title-icon">🎯</div>Your DPNow Blueprint ROI Results</div>
+    <div class="card-sub">3-Year projected gross benefit — before additional software licence costs.</div>
+
+    <div class="result-header">
+      <h2>Estimated 3-Year Net Benefit</h2>
+      <div class="big-num" id="r_total3">—</div>
+      <div class="sub">Cumulative projected net savings over 3 years (after €50K implementation investment)</div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="m-label">Year 1 (25% Benefits)</div>
+        <div class="m-val" id="r_y1">—</div>
+        <div class="m-sub">Ramp-up phase</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-label">Year 2 (70% Benefits)</div>
+        <div class="m-val" id="r_y2">—</div>
+        <div class="m-sub">Scaling phase</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-label">Year 3 (100% Benefits)</div>
+        <div class="m-val" id="r_y3">—</div>
+        <div class="m-sub">Full maturity</div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">📈 Benefit Progression Over 3 Years</div>
+      <div class="bar-chart">
+        <div class="bar-group">
+          <div class="bar" id="bar1"><div class="bar-pct">25%</div></div>
+          <div class="bar-label" id="blabel1">—</div>
+          <div class="bar-year">Year 1</div>
+        </div>
+        <div class="bar-group">
+          <div class="bar" id="bar2"><div class="bar-pct">70%</div></div>
+          <div class="bar-label" id="blabel2">—</div>
+          <div class="bar-year">Year 2</div>
+        </div>
+        <div class="bar-group">
+          <div class="bar" id="bar3"><div class="bar-pct">100%</div></div>
+          <div class="bar-label" id="blabel3">—</div>
+          <div class="bar-year">Year 3</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--white);border-radius:12px;padding:24px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:24px;">
+      <h3 style="font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:16px;">Benefit Breakdown &amp; Cumulative Summary</h3>
+      <table class="year-table">
+        <thead>
+          <tr>
+            <th>Benefit Category</th>
+            <th style="text-align:center;">Full Annual Potential</th>
+          </tr>
+        </thead>
+        <tbody id="breakdownBody"></tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td><b>GROSS TOTAL</b></td>
+            <td class="val" style="text-align:center;" id="ft_full">—</td>
+          </tr>
+          <tr class="total-row" style="background:#fff3e0;">
+            <td style="color:#c25a00;"><b>Implementation Investment</b></td>
+            <td style="color:#c25a00;font-weight:700;text-align:center;">— €50,000</td>
+          </tr>
+          <tr class="net-row">
+            <td><b>NET BENEFIT (3 YRS)</b></td>
+            <td class="val" style="text-align:center;" id="ft_net_annual">—</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="disclaimer">
+      ⚠️ <b>Important Notice:</b> These projections represent potential gross benefits before software licence costs, which will be tailored to your specific situation. Year 1 reflects 25% of full benefit potential (ramp-up), Year 2 reflects 70%, and Year 3 reflects 100% at full maturity. The €50,000 implementation investment is deducted once from the cumulative total. This calculator is intended for <b>indicative purposes only</b>.
+    </div>
+
+    <div class="cta-box">
+      <h3>Ready to Realise Your Potential?</h3>
+      <p>Let a DPNow Blueprint expert validate these numbers and design a tailored program for your organisation.</p>
+      <div class="cta-buttons">
+        <a href="mailto:contact@dpnow.ch?subject=DPNow Blueprint – Request a Meeting&body=I would like to schedule a meeting to discuss my procurement ROI." class="btn-cta-primary">📅 Request a Meeting</a>
+        <a href="mailto:contact@dpnow.ch?subject=DPNow Blueprint ROI Report" class="btn-cta-secondary">📧 Send Me This Report</a>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:20px;">
+      <button class="btn btn-secondary" onclick="goStep(2)">← Adjust Inputs</button>
+      <button class="btn btn-primary" onclick="goStep(1)">🔄 Start Over</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const IMPL_COST = 50000;
+
+function formatMoney(v){
+  v = Number(v);
+  if(v >= 1000000000) return '€' + (v/1000000000).toFixed(1) + 'B';
+  if(v >= 1000000)    return '€' + (v/1000000).toFixed(1) + 'M';
+  if(v >= 1000)       return '€' + Math.round(v/1000) + 'K';
+  return '€' + v;
+}
+function formatNum(v){ return Number(v).toLocaleString(); }
+function formatPct(v){ return v + '%'; }
+function formatDays(v){ return v + (v==1?' day':' days'); }
+function fmtK(v){
+  if(Math.abs(v)>=1e9) return '€'+(v/1e9).toFixed(2)+'B';
+  if(Math.abs(v)>=1e6) return '€'+(v/1e6).toFixed(2)+'M';
+  if(Math.abs(v)>=1e3) return '€'+(v/1e3).toFixed(1)+'K';
+  return '€'+Math.round(v).toLocaleString();
+}
+
+function updSlider(id, vid, fmt){
+  document.getElementById(vid).textContent = fmt(document.getElementById(id).value);
+}
+
+function goStep(n){
+  [1,2,3].forEach(i => {
+    document.getElementById('step'+i).classList.toggle('active', i===n);
+    const si = document.getElementById('si'+i);
+    si.classList.remove('active','done');
+    if(i===n) si.classList.add('active');
+    if(i<n)   si.classList.add('done');
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function calcAndShow(){
+  const spendM   = Number(document.getElementById('spend').value);
+  const spend    = spendM * 1e6;
+  const invoices = Number(document.getElementById('inv').value);
+  const pos      = Number(document.getElementById('po').value);
+  const suppliers= Number(document.getElementById('sup').value);
+  const hc       = Number(document.getElementById('hc').value);
+  const salary   = Number(document.getElementById('sal').value);
+  const mavPct   = Number(document.getElementById('mav').value)/100;
+  const iptDays  = Number(document.getElementById('ipt').value);
+  const scPct    = Number(document.getElementById('sc').value)/100;
+  const pocPct   = Number(document.getElementById('poc').value)/100;
+  const ecatPct  = Number(document.getElementById('ecat').value)/100;
+
+  // ── Benefit: FTE Reduction
+  // Blueprint automation (e-catalog, PO automation, invoice matching) reduces manual processing load.
+  // Estimate FTE savings based on improvement in PO coverage, e-catalog adoption and invoice volume:
+  // - Each 10% uplift in PO-coverage or e-catalog frees ~0.5 FTE per 1000 transactions
+  // - Invoice automation (processing time reduction) frees further capacity
+  const txVolume       = (invoices + pos) / 1000;                          // transaction volume in thousands
+  const pocUplift      = Math.max(0, 0.90 - pocPct);                       // gap to 90% PO coverage
+  const ecatUplift     = Math.max(0, 0.65 - ecatPct);                      // gap to 65% e-catalog
+  const iptUplift      = Math.max(0, (iptDays - 5)) / 25;                  // invoice time improvement ratio
+  const fteReduction   = txVolume * (pocUplift + ecatUplift + iptUplift) * 0.5; // FTEs freed
+  const fteSavings     = Math.round(fteReduction) * salary;                // valued at full salary cost
+
+  const spendSavings    = spend * mavPct * 0.10;
+  const contractSavings = spend * (1 - scPct) * Math.max(0, 0.80 - scPct) * 0.005;
+  const invoiceSavings  = invoices * (Math.max(0, (iptDays - 5)) / 25 * 12);
+  const poSavings       = spend * Math.max(0, 0.90 - pocPct) * 0.008;
+  const catalogSavings  = pos * Math.max(0, 0.65 - ecatPct) * 20;
+  const hcProductivity  = hc * salary * 0.25;
+  const supplierSavings = Math.max(0, suppliers - spendM) * 500;
+
+  const categories = [
+    { name: 'Spend Reduction',    full: Math.round(spendSavings)    },
+    { name: 'Contract Compliance Uplift',            full: Math.round(contractSavings) },
+    { name: 'Invoice Processing Efficiency',         full: Math.round(invoiceSavings)  },
+    { name: 'PO Coverage Improvement',               full: Math.round(poSavings)       },
+    { name: 'Supplier Rationalisation',              full: Math.round(supplierSavings) },
+    { name: 'FTE Reduction (Automation Savings)',    full: Math.round(fteSavings)      },
+  ];
+
+  const fullTotal  = categories.reduce((a,c)=>a+c.full, 0);
+  const y1         = Math.round(fullTotal * 0.25);
+  const y2         = Math.round(fullTotal * 0.70);
+  const y3         = fullTotal;
+  const grossCumul = y1 + y2 + y3;
+  const netCumul   = grossCumul - IMPL_COST;
+
+  document.getElementById('r_total3').textContent = fmtK(netCumul);
+  document.getElementById('r_y1').textContent = fmtK(y1);
+  document.getElementById('r_y2').textContent = fmtK(y2);
+  document.getElementById('r_y3').textContent = fmtK(y3);
+
+  document.getElementById('blabel1').textContent = fmtK(y1);
+  document.getElementById('blabel2').textContent = fmtK(y2);
+  document.getElementById('blabel3').textContent = fmtK(y3);
+  const maxH = 160;
+  document.getElementById('bar1').style.height = Math.max(12, Math.round(0.25 * maxH)) + 'px';
+  document.getElementById('bar2').style.height = Math.max(12, Math.round(0.70 * maxH)) + 'px';
+  document.getElementById('bar3').style.height = maxH + 'px';
+
+  const tbody = document.getElementById('breakdownBody');
+  tbody.innerHTML = '';
+  categories.forEach(c => {
+    tbody.innerHTML += `<tr>
+      <td>${c.name}</td>
+      <td class="val" style="text-align:center;">${fmtK(c.full)}</td>
+    </tr>`;
+  });
+
+  document.getElementById('ft_full').textContent       = fmtK(fullTotal);
+  document.getElementById('ft_net_annual').textContent = fmtK(fullTotal - IMPL_COST);
+
+  goStep(3);
+}
+
+window.onload = () => {
+  updSlider('spend','v_spend', formatMoney);
+  updSlider('inv',  'v_inv',   formatNum);
+  updSlider('po',   'v_po',    formatNum);
+  updSlider('sup',  'v_sup',   formatNum);
+  updSlider('hc',   'v_hc',    formatNum);
+  updSlider('sal',  'v_sal',   formatMoney);
+  updSlider('mav',  'v_mav',   formatPct);
+  updSlider('ipt',  'v_ipt',   formatDays);
+  updSlider('sc',   'v_sc',    formatPct);
+  updSlider('poc',  'v_poc',   formatPct);
+  updSlider('ecat', 'v_ecat',  formatPct);
+};
+</script>
+</body>
+</html>
